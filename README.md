@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://files.catbox.moe/tv4l6l.jpg" alt="LuciferAPI" width="120" />
+<img src="https://files.catbox.moe/5xhf7i.jpg" alt="LuciferAPI" width="120" />
 
 # 🔥 LuciferAPI
 
