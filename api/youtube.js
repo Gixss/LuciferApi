@@ -7,11 +7,11 @@ const getClient = () => _p || (_p = Innertube.create({ lang: 'en', location: 'US
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = req.query.url || req.body?.url;
   if (!url) return res.status(400).json({ error: 'url wajib' });
+
   const m = url.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/|\/live\/)([A-Za-z0-9_-]{11})/);
   if (!m) return res.status(400).json({ error: 'url youtube invalid' });
   const vid = m[1];
@@ -52,9 +52,11 @@ export default async function handler(req, res) {
       viewCount: b.view_count,
       isShort: /\/shorts\//.test(url) || b.duration <= 60,
       formats: {
-        muxed,
-        videoOnly: adaptive.filter(f => f.hasVideo && !f.hasAudio).sort((a, b) => (b.size || 0) - (a.size || 0)).slice(0, 12),
-        audioOnly: adaptive.filter(f => !f.hasVideo && f.hasAudio).sort((a, b) => (b.size || 0) - (a.size || 0)).slice(0, 5),
+        muxed: muxed.map(f => ({ ...f, filename: `youtube_${vid}_${f.quality}.mp4` })),
+        videoOnly: adaptive.filter(f => f.hasVideo && !f.hasAudio).sort((a,b)=>(b.size||0)-(a.size||0)).slice(0,12)
+          .map(f => ({ ...f, filename: `youtube_${vid}_${f.quality}.mp4` })),
+        audioOnly: adaptive.filter(f => !f.hasVideo && f.hasAudio).sort((a,b)=>(b.size||0)-(a.size||0)).slice(0,5)
+          .map(f => ({ ...f, filename: `youtube_${vid}_audio.${f.container}` })),
       },
     });
   } catch (err) {
