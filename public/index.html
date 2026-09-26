@@ -2,259 +2,373 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LuciferAPI — Multi Tools</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>LuciferAPI — Multi Tools + Chat</title>
 <link rel="icon" href="https://files.catbox.moe/tv4l6l.jpg">
 <link rel="stylesheet" href="/style.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-<div class="bg-glow"></div>
-<div class="bg-noise"></div>
-<div class="particles" id="particles"></div>
 
-<aside class="sidebar" id="sidebar">
-  <div class="sb-brand">
-    <img src="https://files.catbox.moe/tv4l6l.jpg" alt="Lucifer">
-    <div>
+<div id="authScreen" class="auth-screen">
+  <div class="auth-bg"></div>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <img src="https://files.catbox.moe/tv4l6l.jpg" alt="L">
       <h1>Lucifer<span>API</span></h1>
-      <p>v5.0 &middot; Multi Tools</p>
+      <p id="authSub">Masuk ke akun kamu</p>
     </div>
+
+    <div class="auth-tabs">
+      <button class="atab active" data-atab="login">Login</button>
+      <button class="atab" data-atab="register">Daftar</button>
+    </div>
+
+    <form id="loginForm" class="auth-form">
+      <label>Username<input type="text" id="loginUser" autocomplete="username" placeholder="username" required></label>
+      <label>Password<input type="password" id="loginPass" autocomplete="current-password" placeholder="minimal 6 karakter" required></label>
+      <button type="submit" class="auth-submit">Login</button>
+      <p class="auth-error" id="loginErr"></p>
+    </form>
+
+    <form id="registerForm" class="auth-form hidden">
+      <label>Username<input type="text" id="regUser" autocomplete="username" placeholder="3-20 karakter, a-z 0-9 _" required></label>
+      <label>Nama Tampilan<input type="text" id="regName" placeholder="Nama kamu" maxlength="40"></label>
+      <label>Password<input type="password" id="regPass" autocomplete="new-password" placeholder="minimal 6 karakter" required></label>
+      <button type="submit" class="auth-submit">Daftar</button>
+      <p class="auth-error" id="regErr"></p>
+    </form>
+
+    <p class="auth-foot">Password di-hash PBKDF2. Tidak disimpan plain.</p>
   </div>
+</div>
 
-  <div class="sb-search">
-    <input type="text" id="toolSearch" placeholder="Cari tool...">
-    <kbd>Ctrl K</kbd>
-  </div>
+<div id="appShell" class="app-shell hidden">
+  <div class="bg-glow"></div>
+  <div class="bg-noise"></div>
 
-  <nav class="sb-nav" id="sbNav">
-    <div class="nav-group">
-      <div class="nav-title">Downloader</div>
-      <a class="nav-item active" data-tool="tiktok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg><span>TikTok</span></a>
-      <a class="nav-item" data-tool="youtube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg><span>YouTube</span></a>
-      <a class="nav-item" data-tool="instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg><span>Instagram</span></a>
-      <a class="nav-item" data-tool="snackvideo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="5,4 19,12 5,20"/></svg><span>SnackVideo</span></a>
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <img src="https://files.catbox.moe/tv4l6l.jpg" alt="L">
+      <div>
+        <h1>Lucifer<span>API</span></h1>
+        <p>v6.2</p>
+      </div>
     </div>
-    <div class="nav-group">
-      <div class="nav-title">Game</div>
-      <a class="nav-item" data-tool="ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-2 12H8z"/><path d="M9 5l3 3 3-3"/></svg><span>Free Fire OB55</span></a>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">Lua Tools</div>
-      <a class="nav-item" data-tool="deob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Lua Deobfuscator</span></a>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">Utilities</div>
-      <a class="nav-item" data-tool="base64"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg><span>Base64</span></a>
-      <a class="nav-item" data-tool="hash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg><span>Hash</span></a>
-      <a class="nav-item" data-tool="password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M17 5l3 3M14 8l2 2"/></svg><span>Password</span></a>
-      <a class="nav-item" data-tool="qr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3M14 20h6"/></svg><span>QR Code</span></a>
-      <a class="nav-item" data-tool="json"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H6a2 2 0 0 0-2 2v3c0 1-1 2-2 2 1 0 2 1 2 2v3a2 2 0 0 0 2 2h2M16 3h2a2 2 0 0 1 2 2v3c0 1 1 2 2 2-1 0-2 1-2 2v3a2 2 0 0 1-2 2h-2"/></svg><span>JSON</span></a>
-      <a class="nav-item" data-tool="uuid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 12h4M14 12h4"/></svg><span>UUID</span></a>
-      <a class="nav-item" data-tool="color"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="9" r="1.5" fill="currentColor"/><circle cx="9" cy="15" r="1.5" fill="currentColor"/></svg><span>Color</span></a>
-    </div>
-    <div class="nav-group">
-      <div class="nav-title">Info</div>
-      <a class="nav-item" data-tool="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h13l3 3v13H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg><span>API Docs</span></a>
-      <a class="nav-item" data-tool="about"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg><span>About</span></a>
-    </div>
-  </nav>
-  <div class="sb-foot"><span class="dot"></span> v5.0 &middot; Online</div>
-</aside>
 
-<button class="menu-btn" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-<div class="sb-overlay" id="sbOverlay"></div>
-
-<main class="main">
-  <div class="topbar">
-    <div>
-      <h2 id="pageTitle">TikTok Downloader</h2>
-      <p id="pageDesc">Unduh video TikTok tanpa watermark.</p>
-    </div>
-    <div class="topbar-actions">
-      <button class="ghost-btn" id="clearBtn" title="Clear">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sbAvatar">U</div>
+      <div class="sb-uname">
+        <div id="sbDisplay">—</div>
+        <div class="sb-uhandle" id="sbHandle">@—</div>
+      </div>
+      <button class="sb-logout" id="logoutBtn" title="Logout">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
     </div>
-  </div>
 
-  <section class="tool-panel active" id="tool-tiktok">
-    <form class="input-form" data-platform="tiktok">
-      <input type="url" placeholder="https://www.tiktok.com/@user/video/..." required>
-      <button type="submit"><span class="btn-text">Ambil Video</span><span class="btn-loader"></span></button>
-    </form>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-youtube">
-    <form class="input-form" data-platform="youtube">
-      <input type="url" placeholder="https://youtu.be/..." required>
-      <button type="submit"><span class="btn-text">Ambil Video</span><span class="btn-loader"></span></button>
-    </form>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-instagram">
-    <form class="input-form" data-platform="instagram">
-      <input type="url" placeholder="https://www.instagram.com/reel/..." required>
-      <button type="submit"><span class="btn-text">Ambil Video</span><span class="btn-loader"></span></button>
-    </form>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-snackvideo">
-    <form class="input-form" data-platform="snackvideo">
-      <input type="url" placeholder="https://s.snackvideo.com/..." required>
-      <button type="submit"><span class="btn-text">Ambil Video</span><span class="btn-loader"></span></button>
-    </form>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-ff">
-    <form class="input-form" data-platform="ff">
-      <input type="text" id="ffUid" placeholder="UID (contoh: 1234567890)" required>
-      <select id="ffRegion">
-        <option value="ID">ID — Indonesia</option><option value="SG">SG — Singapore</option>
-        <option value="IND">IND — India</option><option value="BR">BR — Brazil</option>
-        <option value="ME">ME — Middle East</option><option value="VN">VN — Vietnam</option>
-        <option value="TH">TH — Thailand</option><option value="PK">PK — Pakistan</option>
-        <option value="US">US</option><option value="TW">TW — Taiwan</option>
-        <option value="BD">BD — Bangladesh</option>
-      </select>
-      <button type="submit"><span class="btn-text">Cek Akun</span><span class="btn-loader"></span></button>
-    </form>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-deob">
-    <div class="deob-head">
-      <div class="deob-targets">
-        <span class="tag">Luraph</span>
-        <span class="tag">Moonsec</span>
-        <span class="tag">WeAreDevs</span>
-        <span class="tag">IronBrew</span>
-        <span class="tag">Ares</span>
-        <span class="tag">Generic</span>
-      </div>
-      <p class="hint">Paste kode Lua hasil obfuscator. Server bakal deteksi jenisnya, decode escape, unfold string, dan pretty-print hasilnya.</p>
+    <div class="sb-search">
+      <input type="text" id="toolSearch" placeholder="Cari...">
+      <kbd>Ctrl K</kbd>
     </div>
-    <div class="input-form stack">
-      <textarea id="deobInput" placeholder="-- paste Lua obfuscated code di sini" rows="10"></textarea>
-    </div>
-    <div class="btn-row">
-      <button class="act-btn" data-action="deob">Deobfuscate</button>
-      <button class="act-btn ghost" data-action="deob-copy">Copy Hasil</button>
-      <button class="act-btn ghost" data-action="clear">Clear</button>
-    </div>
-    <div class="result hidden"></div>
-  </section>
 
-  <section class="tool-panel" id="tool-base64">
-    <div class="input-form stack"><textarea id="b64Input" placeholder="Teks atau Base64..." rows="4"></textarea></div>
-    <div class="btn-row">
-      <button class="act-btn" data-action="encode-b64">Encode</button>
-      <button class="act-btn" data-action="decode-b64">Decode</button>
-      <button class="act-btn ghost" data-action="clear">Clear</button>
-    </div>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-hash">
-    <div class="input-form"><input type="text" id="hashInput" placeholder="Teks..."></div>
-    <div class="btn-row"><button class="act-btn" data-action="hash">Generate Hash</button></div>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-password">
-    <div class="input-form">
-      <input type="number" id="pwLength" value="20" min="4" max="128">
-      <label class="chk"><input type="checkbox" id="pwSymbols" checked> Simbol</label>
-      <label class="chk"><input type="checkbox" id="pwNumbers" checked> Angka</label>
-      <button class="act-btn" data-action="gen-pw">Generate</button>
-    </div>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-qr">
-    <div class="input-form">
-      <input type="text" id="qrInput" placeholder="Teks / URL" value="https://luciferapi.vercel.app">
-      <button class="act-btn" data-action="gen-qr">Generate</button>
-    </div>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-json">
-    <div class="input-form stack"><textarea id="jsonInput" placeholder='{"key":"value"}' rows="6"></textarea></div>
-    <div class="btn-row">
-      <button class="act-btn" data-action="format-json">Format</button>
-      <button class="act-btn" data-action="minify-json">Minify</button>
-      <button class="act-btn ghost" data-action="clear">Clear</button>
-    </div>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-uuid">
-    <div class="btn-row"><button class="act-btn" data-action="gen-uuid">Generate UUID v4</button></div>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-color">
-    <div class="input-form">
-      <input type="text" id="colorInput" placeholder="#e63946 atau rgb(230,57,70)" value="#e63946">
-      <button class="act-btn" data-action="color-convert">Convert</button>
-    </div>
-    <div class="result hidden"></div>
-  </section>
-
-  <section class="tool-panel" id="tool-docs">
-    <div class="docs-grid">
-      <div class="doc-card"><h3>POST /api/tiktok</h3><p>Scrape TikTok tanpa watermark.</p><pre>{"url":"https://vt.tiktok.com/..."}</pre></div>
-      <div class="doc-card"><h3>POST /api/youtube</h3><p>Video + Shorts, semua kualitas.</p><pre>{"url":"https://youtu.be/..."}</pre></div>
-      <div class="doc-card"><h3>POST /api/instagram</h3><p>Reels, post, IGTV.</p><pre>{"url":"https://instagram.com/reel/..."}</pre></div>
-      <div class="doc-card"><h3>POST /api/snackvideo</h3><p>Parse OpenGraph langsung.</p><pre>{"url":"https://s.snackvideo.com/..."}</pre></div>
-      <div class="doc-card"><h3>POST /api/ffcheck</h3><p>Cek akun Free Fire OB55.</p><pre>{"uid":"123","region":"ID"}</pre></div>
-      <div class="doc-card"><h3>POST /api/deobfuscate</h3><p>Lua deobfuscator.</p><pre>{"code":"-- obfuscated lua..."}</pre></div>
-      <div class="doc-card"><h3>GET /api/download</h3><p>Proxy stream + force download.</p><pre>?url=...&filename=video.mp4</pre></div>
-    </div>
-  </section>
-
-  <section class="tool-panel" id="tool-about">
-    <div class="about-wrap">
-      <div class="about-hero">
-        <img src="https://files.catbox.moe/tv4l6l.jpg" alt="Lucifer" class="about-logo">
-        <div>
-          <h3>LuciferAPI <span>v5.0</span></h3>
-          <p>Multi-platform scraper + utility tools + Lua deobfuscator.</p>
-        </div>
+    <nav class="sb-nav" id="sbNav">
+      <div class="nav-group">
+        <div class="nav-title">Chat</div>
+        <a class="nav-item" data-tool="chat-global">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3 21l1.9-5.6a8.4 8.4 0 0 1-.9-3.9A8.5 8.5 0 0 1 12.5 3a8.4 8.4 0 0 1 8.5 8.5z"/></svg>
+          <span>Chat Global</span>
+        </a>
+        <a class="nav-item" data-tool="chat-dm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Chat Pribadi</span>
+        </a>
+        <a class="nav-item" data-tool="users">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Pengguna</span>
+        </a>
       </div>
 
-      <div class="about-grid">
-        <div class="about-card">
-          <div class="about-label">Developer</div>
-          <div class="about-value big">Gixss</div>
-        </div>
-        <div class="about-card">
-          <div class="about-label">Kontak</div>
-          <a class="wa-link" href="https://wa.me/6282322985264" target="_blank" rel="noopener">
-            <svg class="wa-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-            <span class="wa-num">62 8**-****-5264</span>
-          </a>
-        </div>
-        <div class="about-card">
-          <div class="about-label">Stack</div>
-          <div class="about-value">Node.js · Vercel Functions · Vanilla JS</div>
-        </div>
-        <div class="about-card">
-          <div class="about-label">Total Tools</div>
-          <div class="about-value big">15</div>
-        </div>
+      <div class="nav-group">
+        <div class="nav-title">Downloader</div>
+        <a class="nav-item active" data-tool="tiktok">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+          <span>TikTok</span>
+        </a>
+        <a class="nav-item" data-tool="youtube">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg>
+          <span>YouTube</span>
+        </a>
+        <a class="nav-item" data-tool="instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
+          <span>Instagram</span>
+        </a>
+        <a class="nav-item" data-tool="snackvideo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="5,4 19,12 5,20"/></svg>
+          <span>SnackVideo</span>
+        </a>
       </div>
 
-      <div class="about-note">Nomor WhatsApp disamarkan untuk privasi. Klik untuk chat langsung.</div>
-    </div>
-  </section>
-</main>
+      <div class="nav-group">
+        <div class="nav-title">Tools</div>
+        <a class="nav-item" data-tool="ff">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-2 12H8z"/><path d="M9 5l3 3 3-3"/></svg>
+          <span>Free Fire OB55</span>
+        </a>
+        <a class="nav-item" data-tool="deob">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Lua Deobfuscator</span>
+        </a>
+        <a class="nav-item" data-tool="base64">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+          <span>Base64</span>
+        </a>
+        <a class="nav-item" data-tool="hash">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg>
+          <span>Hash</span>
+        </a>
+        <a class="nav-item" data-tool="qr">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3M14 20h6"/></svg>
+          <span>QR Code</span>
+        </a>
+        <a class="nav-item" data-tool="json">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H6a2 2 0 0 0-2 2v3c0 1-1 2-2 2 1 0 2 1 2 2v3a2 2 0 0 0 2 2h2M16 3h2a2 2 0 0 1 2 2v3c0 1 1 2 2 2-1 0-2 1-2 2v3a2 2 0 0 1-2 2h-2"/></svg>
+          <span>JSON</span>
+        </a>
+      </div>
 
-<script src="/script.js"></script>
+      <div class="nav-group">
+        <div class="nav-title">Info</div>
+        <a class="nav-item" data-tool="about">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+          <span>About</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sb-foot"><span class="dot"></span> Online</div>
+  </aside>
+
+  <button class="menu-btn" id="menuBtn">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <div class="sb-overlay" id="sbOverlay"></div>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h2 id="pageTitle">TikTok Downloader</h2>
+        <p id="pageDesc">Unduh video TikTok tanpa watermark.</p>
+      </div>
+    </div>
+
+    <!-- CHAT GLOBAL -->
+    <section class="tool-panel" id="tool-chat-global">
+      <div class="chat-wrap">
+        <div class="chat-head">
+          <div class="chat-title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3 21l1.9-5.6a8.4 8.4 0 0 1-.9-3.9A8.5 8.5 0 0 1 12.5 3a8.4 8.4 0 0 1 8.5 8.5z"/></svg>
+            <span>Chat Global</span>
+          </div>
+          <div class="chat-count" id="gCount">—</div>
+        </div>
+        <div class="chat-messages" id="gMessages"></div>
+        <div class="chat-compose">
+          <button class="cc-btn" id="gImage" title="Foto">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </button>
+          <button class="cc-btn" id="gFile" title="File">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <button class="cc-btn" id="gVoice" title="Pesan suara">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v3M8 22h8"/></svg>
+          </button>
+          <input type="text" id="gInput" placeholder="Tulis pesan...">
+          <button class="cc-send" id="gSend">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAT DM -->
+    <section class="tool-panel" id="tool-chat-dm">
+      <div class="dm-wrap">
+        <div class="dm-list">
+          <div class="dm-list-head">Kontak</div>
+          <div id="dmContacts"></div>
+        </div>
+        <div class="dm-room">
+          <div class="dm-room-head" id="dmRoomHead">
+            <span class="dm-empty">Pilih kontak untuk mulai chat</span>
+          </div>
+          <div class="chat-messages" id="dmMessages"></div>
+          <div class="chat-compose" id="dmCompose" style="display:none">
+            <button class="cc-btn" id="dImage" title="Foto">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </button>
+            <button class="cc-btn" id="dFile" title="File">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button class="cc-btn" id="dVoice" title="Pesan suara">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v3M8 22h8"/></svg>
+            </button>
+            <input type="text" id="dInput" placeholder="Tulis pesan...">
+            <button class="cc-send" id="dSend">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- USERS -->
+    <section class="tool-panel" id="tool-users">
+      <div class="result" id="usersList"></div>
+    </section>
+
+    <!-- TIKTOK -->
+    <section class="tool-panel active" id="tool-tiktok">
+      <form class="input-form" data-platform="tiktok">
+        <input type="url" placeholder="https://www.tiktok.com/@user/video/..." required>
+        <button type="submit"><span class="btn-text">Ambil</span><span class="btn-loader"></span></button>
+      </form>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- YOUTUBE -->
+    <section class="tool-panel" id="tool-youtube">
+      <form class="input-form" data-platform="youtube">
+        <input type="url" placeholder="https://youtu.be/..." required>
+        <button type="submit"><span class="btn-text">Ambil</span><span class="btn-loader"></span></button>
+      </form>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- IG -->
+    <section class="tool-panel" id="tool-instagram">
+      <form class="input-form" data-platform="instagram">
+        <input type="url" placeholder="https://www.instagram.com/reel/..." required>
+        <button type="submit"><span class="btn-text">Ambil</span><span class="btn-loader"></span></button>
+      </form>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- SNACK -->
+    <section class="tool-panel" id="tool-snackvideo">
+      <form class="input-form" data-platform="snackvideo">
+        <input type="url" placeholder="https://s.snackvideo.com/..." required>
+        <button type="submit"><span class="btn-text">Ambil</span><span class="btn-loader"></span></button>
+      </form>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- FF -->
+    <section class="tool-panel" id="tool-ff">
+      <form class="input-form" data-platform="ff">
+        <input type="text" id="ffUid" placeholder="UID" required>
+        <select id="ffRegion">
+          <option value="ID">ID — Indonesia</option>
+          <option value="SG">SG — Singapore</option>
+          <option value="IND">IND — India</option>
+          <option value="BR">BR — Brazil</option>
+          <option value="ME">ME — Middle East</option>
+          <option value="VN">VN — Vietnam</option>
+          <option value="TH">TH — Thailand</option>
+          <option value="PK">PK — Pakistan</option>
+          <option value="US">US</option>
+          <option value="TW">TW — Taiwan</option>
+          <option value="BD">BD — Bangladesh</option>
+        </select>
+        <button type="submit"><span class="btn-text">Cek</span><span class="btn-loader"></span></button>
+      </form>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- DEOB -->
+    <section class="tool-panel" id="tool-deob">
+      <div class="deob-head">
+        <div class="deob-targets">
+          <span class="tag">Luraph</span><span class="tag">Moonsec</span><span class="tag">WeAreDevs</span><span class="tag">IronBrew</span><span class="tag">Generic</span>
+        </div>
+        <p class="hint">Paste kode Lua hasil obfuscator.</p>
+      </div>
+      <div class="input-form stack"><textarea id="deobInput" placeholder="-- paste Lua obfuscated" rows="10"></textarea></div>
+      <div class="btn-row">
+        <button class="act-btn" data-action="deob">Deobfuscate</button>
+        <button class="act-btn ghost" data-action="deob-copy">Copy</button>
+        <button class="act-btn ghost" data-action="clear">Clear</button>
+      </div>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- BASE64 -->
+    <section class="tool-panel" id="tool-base64">
+      <div class="input-form stack"><textarea id="b64Input" placeholder="Teks atau Base64..." rows="4"></textarea></div>
+      <div class="btn-row">
+        <button class="act-btn" data-action="encode-b64">Encode</button>
+        <button class="act-btn" data-action="decode-b64">Decode</button>
+        <button class="act-btn ghost" data-action="clear">Clear</button>
+      </div>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- HASH -->
+    <section class="tool-panel" id="tool-hash">
+      <div class="input-form"><input type="text" id="hashInput" placeholder="Teks..."></div>
+      <div class="btn-row"><button class="act-btn" data-action="hash">Hash</button></div>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- QR -->
+    <section class="tool-panel" id="tool-qr">
+      <div class="input-form">
+        <input type="text" id="qrInput" placeholder="Teks / URL" value="https://lucifer-api.vercel.app">
+        <button class="act-btn" data-action="gen-qr">Generate</button>
+      </div>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- JSON -->
+    <section class="tool-panel" id="tool-json">
+      <div class="input-form stack"><textarea id="jsonInput" placeholder='{"key":"value"}' rows="6"></textarea></div>
+      <div class="btn-row">
+        <button class="act-btn" data-action="format-json">Format</button>
+        <button class="act-btn" data-action="minify-json">Minify</button>
+        <button class="act-btn ghost" data-action="clear">Clear</button>
+      </div>
+      <div class="result hidden"></div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="tool-panel" id="tool-about">
+      <div class="about-wrap">
+        <div class="about-hero">
+          <img src="https://files.catbox.moe/tv4l6l.jpg" alt="L" class="about-logo">
+          <div>
+            <h3>LuciferAPI <span>v6.2</span></h3>
+            <p>Multi tools + chat real-time + auth.</p>
+          </div>
+        </div>
+        <div class="about-grid">
+          <div class="about-card"><div class="about-label">Developer</div><div class="about-value big">Gixss</div></div>
+          <div class="about-card">
+            <div class="about-label">Kontak</div>
+            <a class="wa-link" href="https://wa.me/6282322985264" target="_blank" rel="noopener">
+              <svg class="wa-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+              <span class="wa-num">62 8**-****-5264</span>
+            </a>
+          </div>
+          <div class="about-card"><div class="about-label">Stack</div><div class="about-value">Node · Vercel · Upstash Redis</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<input type="file" id="hiddenFile" hidden>
+<input type="file" id="hiddenImage" accept="image/*" hidden>
+
+<script src="/app.js"></script>
 </body>
 </html>
