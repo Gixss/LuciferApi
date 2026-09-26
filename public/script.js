@@ -20,7 +20,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtDur = s => !s ? '—' : `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
-const fmtBytes = b => { if (!b) return '—'; b = parseInt(b); const u=['B','KB','MB','GB']; let i=0; while (b>=1024 && i<u.length-1){b/=1024;i++;} return `${b.toFixed(1)} ${u[i]}`; };
+const fmtBytes = b => { if (!b) return ''; b = parseInt(b); const u=['B','KB','MB','GB']; let i=0; while (b>=1024 && i<u.length-1){b/=1024;i++;} return `${b.toFixed(1)} ${u[i]}`; };
 
 function toast(msg, type = 'ok') {
   const t = document.createElement('div');
@@ -71,8 +71,7 @@ if (searchInput) {
     $$('.nav-group').forEach(g => {
       let visible = 0;
       g.querySelectorAll('.nav-item').forEach(it => {
-        const txt = it.textContent.toLowerCase();
-        const match = !q || txt.includes(q);
+        const match = !q || it.textContent.toLowerCase().includes(q);
         it.classList.toggle('hidden', !match);
         if (match) visible++;
       });
@@ -84,6 +83,33 @@ if (searchInput) {
   });
 }
 
+// proxy download helper
+function proxyUrl(rawUrl, filename) {
+  return `/api/download?url=${encodeURIComponent(rawUrl)}&filename=${encodeURIComponent(filename || 'video.mp4')}`;
+}
+
+async function triggerDownload(rawUrl, filename) {
+  try {
+    const res = await fetch(proxyUrl(rawUrl, filename));
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({ error: 'gagal download' }));
+      throw new Error(j.error || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'video.mp4';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    toast('Download dimulai', 'ok');
+  } catch (err) {
+    toast('Gagal download: ' + err.message, 'err');
+  }
+}
+
 // scraper forms
 $$('.input-form[data-platform]').forEach(form => {
   const btn = form.querySelector('button');
@@ -93,6 +119,7 @@ $$('.input-form[data-platform]').forEach(form => {
     const platform = form.dataset.platform;
     btn.classList.add('loading'); btn.disabled = true;
     rc.classList.add('hidden');
+    rc.innerHTML = '';
 
     try {
       let payload, endpoint;
@@ -110,7 +137,10 @@ $$('.input-form[data-platform]').forEach(form => {
         body: JSON.stringify(payload),
       });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'gagal');
+      if (!res.ok) {
+        const msg = d.hint ? `${d.error}\n\n${d.hint}` : (d.error || 'gagal');
+        throw new Error(msg);
+      }
 
       if (platform === 'tiktok') rc.innerHTML = renderTikTok(d);
       else if (platform === 'youtube') rc.innerHTML = renderYouTube(d);
@@ -119,6 +149,7 @@ $$('.input-form[data-platform]').forEach(form => {
       else if (platform === 'ff') rc.innerHTML = renderFF(d);
 
       rc.classList.remove('hidden');
+      bindDownloadButtons(rc);
     } catch (err) {
       rc.innerHTML = `<p class="error-msg">Error: ${esc(err.message)}</p>`;
       rc.classList.remove('hidden');
@@ -128,23 +159,43 @@ $$('.input-form[data-platform]').forEach(form => {
   });
 });
 
+function bindDownloadButtons(root) {
+  root.querySelectorAll('[data-dl-url]').forEach(el => {
+    el.addEventListener('click', () => triggerDownload(el.dataset.dlUrl, el.dataset.dlName));
+  });
+}
+
 function renderTikTok(d) {
+  const stats = [
+    d.stats?.play ? `<span><b>${(d.stats.play).toLocaleString()}</b> play</span>` : '',
+    d.stats?.like ? `<span><b>${(d.stats.like).toLocaleString()}</b> like</span>` : '',
+    d.stats?.comment ? `<span><b>${(d.stats.comment).toLocaleString()}</b> komentar</span>` : '',
+    d.stats?.share ? `<span><b>${(d.stats.share).toLocaleString()}</b> share</span>` : '',
+  ].filter(Boolean).join('');
+
+  const dlBtns = [
+    d.downloads.no_watermark && `<button class="dl-btn" data-dl-url="${esc(d.downloads.no_watermark.url)}" data-dl-name="${esc(d.downloads.no_watermark.filename)}"><span class="label">MP4 · No Watermark</span><span class="value">Download</span></button>`,
+    d.downloads.hd && `<button class="dl-btn" data-dl-url="${esc(d.downloads.hd.url)}" data-dl-name="${esc(d.downloads.hd.filename)}"><span class="label">MP4 · HD</span><span class="value">Download</span></button>`,
+    d.downloads.watermark && `<button class="dl-btn" data-dl-url="${esc(d.downloads.watermark.url)}" data-dl-name="${esc(d.downloads.watermark.filename)}"><span class="label">MP4 · Watermark</span><span class="value">Download</span></button>`,
+    d.downloads.audio && `<button class="dl-btn" data-dl-url="${esc(d.downloads.audio.url)}" data-dl-name="${esc(d.downloads.audio.filename)}"><span class="label">MP3 · Audio</span><span class="value">Download</span></button>`,
+  ].filter(Boolean).join('');
+
   return `
-    <div class="result-header">
-      ${d.cover ? `<img src="${d.cover}" class="result-thumb" onerror="this.style.display='none'">` : ''}
-      <div class="result-meta">
+    <div class="media-card">
+      <div class="media-thumb">
+        ${d.cover ? `<img src="${esc(d.cover)}" onerror="this.style.display='none'">` : ''}
+        <span class="media-badge">TikTok</span>
+      </div>
+      <div class="media-info">
         <h4>${esc(d.title || 'Tanpa judul')}</h4>
-        <p>@${esc(d.author?.unique_id || '—')} · ${esc(d.author?.nickname || '')}</p>
-        <p>Like ${(d.stats?.like||0).toLocaleString()} · Comment ${(d.stats?.comment||0).toLocaleString()} · Play ${(d.stats?.play||0).toLocaleString()}</p>
-        <p>${esc(d.music || '—')} · ${fmtDur(d.duration)}</p>
+        <div class="row"><span><b>@${esc(d.author?.unique_id || '—')}</b></span>${d.author?.nickname ? `<span>${esc(d.author.nickname)}</span>` : ''}</div>
+        <div class="kv">Durasi: <b>${fmtDur(d.duration)}</b></div>
+        ${d.music ? `<div class="kv">Audio: <b>${esc(d.music)}</b></div>` : ''}
+        ${stats ? `<div class="meta-line">${stats}</div>` : ''}
       </div>
     </div>
-    <div class="download-grid">
-      ${d.downloads.no_watermark ? `<a class="dl-btn" href="${d.downloads.no_watermark}" target="_blank"><span class="label">No Watermark</span><span class="value">Download MP4</span></a>` : ''}
-      ${d.downloads.watermark ? `<a class="dl-btn" href="${d.downloads.watermark}" target="_blank"><span class="label">Watermark</span><span class="value">Download MP4</span></a>` : ''}
-      ${d.downloads.hd ? `<a class="dl-btn" href="${d.downloads.hd}" target="_blank"><span class="label">HD</span><span class="value">Download MP4</span></a>` : ''}
-      ${d.downloads.audio ? `<a class="dl-btn" href="${d.downloads.audio}" target="_blank"><span class="label">Audio</span><span class="value">Download MP3</span></a>` : ''}
-    </div>`;
+    <div class="dl-grid">${dlBtns}</div>
+  `;
 }
 
 function renderYouTube(d) {
@@ -153,68 +204,99 @@ function renderYouTube(d) {
     ...(d.formats.videoOnly||[]).map(f => ({...f, t:'Video Only'})),
     ...(d.formats.audioOnly||[]).map(f => ({...f, t:'Audio Only'})),
   ];
+
   return `
-    <div class="result-header">
-      ${d.thumbnail ? `<img src="${d.thumbnail}" class="result-thumb" onerror="this.style.display='none'">` : ''}
-      <div class="result-meta">
+    <div class="media-card">
+      <div class="media-thumb">
+        ${d.thumbnail ? `<img src="${esc(d.thumbnail)}" onerror="this.style.display='none'">` : ''}
+        <span class="media-badge">${d.isShort ? 'Short' : 'YouTube'}</span>
+      </div>
+      <div class="media-info">
         <h4>${esc(d.title)}</h4>
-        <p>${esc(d.author||'—')} ${d.isShort ? '· SHORTS' : ''}</p>
-        <p>${fmtDur(d.duration)} · ${(parseInt(d.viewCount)||0).toLocaleString()} views</p>
+        <div class="row"><span><b>${esc(d.author || '—')}</b></span></div>
+        <div class="kv">Durasi: <b>${fmtDur(d.duration)}</b>${d.viewCount ? ` · ${(parseInt(d.viewCount)).toLocaleString()} views` : ''}</div>
+        ${d.description ? `<div class="kv" style="font-size:.78rem;color:var(--tx-m);margin-top:.4rem">${esc(d.description.slice(0,180))}${d.description.length>180?'...':''}</div>` : ''}
       </div>
     </div>
     <table class="formats-table">
-      <thead><tr><th>Tipe</th><th>Kualitas</th><th>Container</th><th>Ukuran</th><th>Link</th></tr></thead>
-      <tbody>${all.map(f => `<tr><td>${f.t}</td><td>${esc(f.quality||'—')}</td><td>${esc(f.container||'—')}</td><td>${fmtBytes(f.size)}</td><td><a href="${f.url}" target="_blank">Download</a></td></tr>`).join('')}</tbody>
-    </table>`;
+      <thead><tr><th>Tipe</th><th>Kualitas</th><th>Container</th><th>Ukuran</th><th>Aksi</th></tr></thead>
+      <tbody>${all.map(f => `<tr><td>${f.t}</td><td>${esc(f.quality||'—')}</td><td>${esc(f.container||'—')}</td><td>${fmtBytes(f.size)||'—'}</td><td><button class="dl-link" data-dl-url="${esc(f.url)}" data-dl-name="${esc(f.filename)}">Download</button></td></tr>`).join('')}</tbody>
+    </table>
+  `;
 }
 
 function renderInstagram(d) {
+  const dlBtns = (d.downloads||[]).map((x,i) => `
+    <button class="dl-btn" data-dl-url="${esc(x.url)}" data-dl-name="${esc(x.filename || `instagram_${i+1}.${x.type==='video'?'mp4':'jpg'}`)}">
+      <span class="label">${esc(x.type)}${d.downloads.length>1?' #'+(i+1):''}</span>
+      <span class="value">Download</span>
+    </button>
+  `).join('');
+
   return `
-    <div class="result-header">
-      ${d.thumbnail ? `<img src="${d.thumbnail}" class="result-thumb" onerror="this.style.display='none'">` : ''}
-      <div class="result-meta">
+    <div class="media-card">
+      <div class="media-thumb">
+        ${d.thumbnail ? `<img src="${esc(d.thumbnail)}" onerror="this.style.display='none'">` : ''}
+        <span class="media-badge">${esc(d.type)}</span>
+      </div>
+      <div class="media-info">
         <h4>@${esc(d.author?.username || '—')}</h4>
-        <p>${esc(d.author?.full_name || '')}</p>
-        <p>Tipe: ${esc(d.type)}</p>
-        <p>Like ${(d.stats?.like||0).toLocaleString()} · Comment ${(d.stats?.comment||0).toLocaleString()}</p>
-        <p style="font-size:.78rem;color:#9a9aac">${esc((d.caption||'').slice(0,150))}</p>
+        <div class="row">${d.author?.full_name ? `<span>${esc(d.author.full_name)}</span>` : ''}</div>
+        <div class="meta-line">
+          ${d.stats?.like ? `<span><b>${(d.stats.like).toLocaleString()}</b> like</span>` : ''}
+          ${d.stats?.comment ? `<span><b>${(d.stats.comment).toLocaleString()}</b> komentar</span>` : ''}
+          ${d.stats?.view ? `<span><b>${(d.stats.view).toLocaleString()}</b> view</span>` : ''}
+        </div>
+        ${d.caption ? `<div class="kv" style="margin-top:.55rem;font-size:.8rem;color:var(--tx-m)">${esc(d.caption.slice(0,200))}${d.caption.length>200?'...':''}</div>` : ''}
       </div>
     </div>
-    <div class="download-grid">
-      ${(d.downloads||[]).map((x,i) => `<a class="dl-btn" href="${x.url}" target="_blank"><span class="label">${x.type}${d.downloads.length>1?' #'+(i+1):''}</span><span class="value">Download</span></a>`).join('')}
-    </div>`;
+    <div class="dl-grid">${dlBtns}</div>
+  `;
 }
 
 function renderSnack(d) {
+  const dlBtns = (d.downloads||[]).map(x => `
+    <button class="dl-btn" data-dl-url="${esc(x.url)}" data-dl-name="${esc(x.filename)}">
+      <span class="label">${esc(x.label||'MP4')}</span>
+      <span class="value">Download</span>
+    </button>
+  `).join('');
+
   return `
-    <div class="result-header">
-      ${d.thumbnail ? `<img src="${d.thumbnail}" class="result-thumb" onerror="this.style.display='none'">` : ''}
-      <div class="result-meta"><h4>${esc(d.title||'SnackVideo')}</h4><p>${esc(d.description||'')}</p></div>
+    <div class="media-card">
+      <div class="media-thumb">
+        ${d.thumbnail ? `<img src="${esc(d.thumbnail)}" onerror="this.style.display='none'">` : ''}
+        <span class="media-badge">SnackVideo</span>
+      </div>
+      <div class="media-info">
+        <h4>${esc(d.title || 'SnackVideo')}</h4>
+        ${d.description ? `<div class="kv">${esc(d.description.slice(0,220))}</div>` : ''}
+      </div>
     </div>
-    <div class="download-grid">
-      ${d.video ? `<a class="dl-btn" href="${d.video}" target="_blank"><span class="label">Video</span><span class="value">Download MP4</span></a>` : '<p class="error-msg">Video tidak ditemukan</p>'}
-    </div>`;
+    <div class="dl-grid">${dlBtns}</div>
+  `;
 }
 
 function renderFF(d) {
   const a = d.account;
   return `
     <div class="ff-profile">
-      ${a.head_pic ? `<img src="${a.head_pic}" class="ff-avatar" onerror="this.style.display='none'">` : ''}
+      ${a.head_pic ? `<img src="${esc(a.head_pic)}" class="ff-avatar" onerror="this.style.display='none'">` : ''}
       <div class="ff-info">
-        <h4>${esc(a.nickname||'Unknown')}</h4>
-        <p>UID: ${d.uid} · Region: ${d.region} · ${d.ob}</p>
+        <h4>${esc(a.nickname || 'Unknown')}</h4>
+        <p style="color:var(--tx-d);font-size:.86rem">UID ${d.uid} · Region ${d.region} · ${d.ob}</p>
       </div>
     </div>
     <div class="ff-stats">
-      <div class="stat-card"><div class="stat-label">Level</div><div class="stat-value">${a.level||'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">EXP</div><div class="stat-value">${a.exp||'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Rank</div><div class="stat-value">${a.rank||'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Rank Points</div><div class="stat-value">${a.rank_points||'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Badges</div><div class="stat-value">${a.badges||'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Clan</div><div class="stat-value">${esc(a.clan_name||'—')}</div></div>
-      <div class="stat-card"><div class="stat-label">Signature</div><div class="stat-value">${esc(a.signature||'—')}</div></div>
-    </div>`;
+      <div class="stat-card"><div class="stat-label">Level</div><div class="stat-value">${a.level ?? '—'}</div></div>
+      <div class="stat-card"><div class="stat-label">EXP</div><div class="stat-value">${a.exp ?? '—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Rank</div><div class="stat-value">${a.rank ?? '—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Rank Points</div><div class="stat-value">${a.rank_points ?? '—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Badges</div><div class="stat-value">${a.badges ?? '—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Clan</div><div class="stat-value">${esc(a.clan_name || '—')}</div></div>
+      <div class="stat-card"><div class="stat-label">Signature</div><div class="stat-value">${esc(a.signature || '—')}</div></div>
+    </div>
+  `;
 }
 
 // utility actions
@@ -236,15 +318,19 @@ $$('.act-btn[data-action]').forEach(btn => {
         });
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || 'gagal');
+
         lastDeobCode = d.code;
+        const passList = d.steps_applied.map(s => `${s.pass}${s.changed ? '' : ' (no-op)'}`).join(' · ');
+
         rc.innerHTML = `
           <h3>Hasil Deobfuscate</h3>
-          <p>Obfuscator terdeteksi: <b>${d.obfuscators.join(', ')}</b></p>
-          <p>Langkah: ${d.steps_applied.join(' → ')}</p>
-          <p>Input ${d.stats.input_size.toLocaleString()} B → Output ${d.stats.output_size.toLocaleString()} B${d.stats.parseable ? ' · parseable via AST' : ''}</p>
-          ${d.strings_found.length ? `<p>String menarik (${d.strings_found.length}):</p><pre><code>${esc(d.strings_found.slice(0,20).join('\n'))}</code></pre>` : ''}
+          <p>Obfuscator terdeteksi: <b>${esc(d.obfuscators.join(', '))}</b></p>
+          <p>Pass: <span style="font-size:.78rem;color:var(--tx-m)">${esc(passList)}</span></p>
+          <p>Input ${d.stats.input_size.toLocaleString()} B → Output ${d.stats.output_size.toLocaleString()} B · ${d.stats.lines.toLocaleString()} baris · ${d.stats.strings_extracted} string</p>
+          ${d.strings_found.length ? `<h3 style="margin-top:1rem">String Menarik</h3><pre><code>${esc(d.strings_found.slice(0,20).join('\n'))}</code></pre>` : ''}
           <h3 style="margin-top:1rem">Kode</h3>
-          <pre><code>${esc(d.code)}</code></pre>`;
+          <pre><code>${esc(d.code)}</code></pre>
+        `;
         rc.classList.remove('hidden');
         toast('Deobfuscate selesai', 'ok');
       } else if (action === 'deob-copy') {
@@ -257,9 +343,8 @@ $$('.act-btn[data-action]').forEach(btn => {
         rc.classList.remove('hidden');
       } else if (action === 'decode-b64') {
         const v = $('#b64Input').value;
-        try {
-          rc.innerHTML = `<h3>Decoded</h3><pre><code>${esc(decodeURIComponent(escape(atob(v))))}</code></pre>`;
-        } catch { throw new Error('Base64 tidak valid'); }
+        try { rc.innerHTML = `<h3>Decoded</h3><pre><code>${esc(decodeURIComponent(escape(atob(v))))}</code></pre>`; }
+        catch { throw new Error('Base64 tidak valid'); }
         rc.classList.remove('hidden');
       } else if (action === 'hash') {
         const v = $('#hashInput').value;
@@ -340,11 +425,6 @@ HSL: hsl(${Math.round(h)}, ${Math.round(s*100)}%, ${Math.round(l*100)}%)</code><
   });
 });
 
-$('#historyBtn')?.addEventListener('click', () => {
-  const h = JSON.parse(localStorage.getItem('lf_history') || '[]');
-  toast(h.length ? `${h.length} entri tersimpan (cleared)` : 'History kosong');
-  localStorage.removeItem('lf_history');
-});
 $('#clearBtn')?.addEventListener('click', () => {
   $$('.result').forEach(r => { r.innerHTML = ''; r.classList.add('hidden'); });
   toast('Dibersihkan');
