@@ -17,7 +17,6 @@ function sc2id(sc) {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = req.query.url || req.body?.url;
@@ -48,13 +47,21 @@ export default async function handler(req, res) {
 
     const downloads = [];
     if (isCar && item.carousel_media) {
-      item.carousel_media.forEach((m, i) => downloads.push({
-        index: i + 1,
-        type: m.media_type === 2 ? 'video' : 'image',
-        url: m.video_versions?.[0]?.url || m.image_versions2?.candidates?.[0]?.url,
-      }));
+      item.carousel_media.forEach((m, i) => {
+        const isMv = m.media_type === 2;
+        downloads.push({
+          index: i + 1,
+          type: isMv ? 'video' : 'image',
+          url: m.video_versions?.[0]?.url || m.image_versions2?.candidates?.[0]?.url,
+          filename: `instagram_${sc}_${i + 1}.${isMv ? 'mp4' : 'jpg'}`,
+        });
+      });
     } else {
-      downloads.push({ type, url: item.video_versions?.[0]?.url || item.image_versions2?.candidates?.[0]?.url });
+      downloads.push({
+        type,
+        url: item.video_versions?.[0]?.url || item.image_versions2?.candidates?.[0]?.url,
+        filename: `instagram_${sc}.${isVid ? 'mp4' : 'jpg'}`,
+      });
     }
 
     res.json({
@@ -68,6 +75,6 @@ export default async function handler(req, res) {
       downloads,
     });
   } catch (err) {
-    res.status(502).json({ error: err.message, hint: 'Set env IG_COOKIE untuk hasil stabil.' });
+    res.status(502).json({ error: err.message, hint: 'Set env IG_COOKIE (sessionid) di Vercel untuk hasil stabil.' });
   }
 }
