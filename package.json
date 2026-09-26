@@ -1,12 +1,10 @@
 {
   "name": "luciferapi",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
   "private": true,
   "dependencies": {
     "axios": "^1.7.7",
-    "youtubei.js": "^10.3.0",
-    "cheerio": "^1.0.0",
-    "luaparse": "^0.3.1"
+    "youtubei.js": "^10.3.0"
   }
 }
