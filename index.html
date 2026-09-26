@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuciferAPI — Multi Tools</title>
+<link rel="icon" href="https://files.catbox.moe/tv4l6l.jpg">
+<link rel="stylesheet" href="/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="bg-overlay"></div>
+<div class="particles" id="particles"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <img src="https://files.catbox.moe/tv4l6l.jpg" alt="Lucifer">
+    <div>
+      <h1>Lucifer<span>API</span></h1>
+      <p>Multi Tools</p>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Downloader</div>
+    <a class="nav-item active" data-tool="tiktok"><span class="ic">🎵</span> TikTok</a>
+    <a class="nav-item" data-tool="youtube"><span class="ic">▶️</span> YouTube</a>
+    <a class="nav-item" data-tool="instagram"><span class="ic">📷</span> Instagram</a>
+    <a class="nav-item" data-tool="snackvideo"><span class="ic">📸</span> SnackVideo</a>
+    <div class="nav-section">Game</div>
+    <a class="nav-item" data-tool="ff"><span class="ic">🎮</span> FF Check OB55</a>
+    <div class="nav-section">Utilities</div>
+    <a class="nav-item" data-tool="base64"><span class="ic">🔐</span> Base64</a>
+    <a class="nav-item" data-tool="hash"><span class="ic">#️⃣</span> Hash</a>
+    <a class="nav-item" data-tool="password"><span class="ic">🔑</span> Password</a>
+    <a class="nav-item" data-tool="qr"><span class="ic">📱</span> QR Code</a>
+    <a class="nav-item" data-tool="json"><span class="ic">📋</span> JSON Formatter</a>
+    <a class="nav-item" data-tool="uuid"><span class="ic">🆔</span> UUID</a>
+    <a class="nav-item" data-tool="color"><span class="ic">🎨</span> Color</a>
+    <div class="nav-section">Info</div>
+    <a class="nav-item" data-tool="docs"><span class="ic">📖</span> API Docs</a>
+    <a class="nav-item" data-tool="about"><span class="ic">ℹ️</span> About</a>
+  </nav>
+  <div class="sidebar-foot">
+    <p>© 2026 LuciferAPI</p>
+  </div>
+</aside>
+
+<button class="menu-toggle" id="menuToggle">☰</button>
+
+<main class="main">
+  <div class="topbar">
+    <h2 id="pageTitle">TikTok Downloader</h2>
+    <p id="pageDesc">Unduh video TikTok tanpa watermark.</p>
+  </div>
+
+  <!-- TikTok -->
+  <section class="tool-panel active" id="tool-tiktok">
+    <form class="input-form" data-platform="tiktok">
+      <input type="url" placeholder="https://www.tiktok.com/@user/video/..." required>
+      <button type="submit"><span class="btn-text">Scrape</span><span class="btn-loader"></span></button>
+    </form>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- YouTube -->
+  <section class="tool-panel" id="tool-youtube">
+    <form class="input-form" data-platform="youtube">
+      <input type="url" placeholder="https://youtu.be/..." required>
+      <button type="submit"><span class="btn-text">Scrape</span><span class="btn-loader"></span></button>
+    </form>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- Instagram -->
+  <section class="tool-panel" id="tool-instagram">
+    <form class="input-form" data-platform="instagram">
+      <input type="url" placeholder="https://www.instagram.com/reel/..." required>
+      <button type="submit"><span class="btn-text">Scrape</span><span class="btn-loader"></span></button>
+    </form>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- SnackVideo -->
+  <section class="tool-panel" id="tool-snackvideo">
+    <form class="input-form" data-platform="snackvideo">
+      <input type="url" placeholder="https://s.snackvideo.com/..." required>
+      <button type="submit"><span class="btn-text">Scrape</span><span class="btn-loader"></span></button>
+    </form>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- FF -->
+  <section class="tool-panel" id="tool-ff">
+    <form class="input-form" data-platform="ff">
+      <input type="text" id="ffUid" placeholder="UID (contoh: 1234567890)" required>
+      <select id="ffRegion">
+        <option value="ID">ID — Indonesia</option>
+        <option value="SG">SG — Singapore</option>
+        <option value="IND">IND — India</option>
+        <option value="BR">BR — Brazil</option>
+        <option value="ME">ME — Middle East</option>
+        <option value="VN">VN — Vietnam</option>
+        <option value="TH">TH — Thailand</option>
+        <option value="PK">PK — Pakistan</option>
+        <option value="US">US</option>
+        <option value="TW">TW — Taiwan</option>
+        <option value="BD">BD — Bangladesh</option>
+      </select>
+      <button type="submit"><span class="btn-text">Check</span><span class="btn-loader"></span></button>
+    </form>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- Base64 -->
+  <section class="tool-panel" id="tool-base64">
+    <div class="input-form">
+      <textarea id="b64Input" placeholder="Teks atau Base64..." rows="4"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="act-btn" data-action="encode-b64">Encode</button>
+      <button class="act-btn" data-action="decode-b64">Decode</button>
+      <button class="act-btn ghost" data-action="clear">Clear</button>
+    </div>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- Hash -->
+  <section class="tool-panel" id="tool-hash">
+    <div class="input-form">
+      <input type="text" id="hashInput" placeholder="Teks...">
+    </div>
+    <div class="btn-row">
+      <button class="act-btn" data-action="hash">Generate Hash</button>
+    </div>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- Password -->
+  <section class="tool-panel" id="tool-password">
+    <div class="input-form">
+      <input type="number" id="pwLength" value="20" min="4" max="128" placeholder="Panjang">
+      <label class="chk"><input type="checkbox" id="pwSymbols" checked> Simbol</label>
+      <label class="chk"><input type="checkbox" id="pwNumbers" checked> Angka</label>
+      <button class="act-btn" data-action="gen-pw">Generate</button>
+    </div>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- QR -->
+  <section class="tool-panel" id="tool-qr">
+    <div class="input-form">
+      <input type="text" id="qrInput" placeholder="Teks / URL..." value="https://luciferapi.vercel.app">
+      <button class="act-btn" data-action="gen-qr">Generate</button>
+    </div>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- JSON -->
+  <section class="tool-panel" id="tool-json">
+    <div class="input-form">
+      <textarea id="jsonInput" placeholder='{"key":"value"}' rows="6"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="act-btn" data-action="format-json">Format</button>
+      <button class="act-btn" data-action="minify-json">Minify</button>
+      <button class="act-btn ghost" data-action="clear">Clear</button>
+    </div>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- UUID -->
+  <section class="tool-panel" id="tool-uuid">
+    <div class="btn-row">
+      <button class="act-btn" data-action="gen-uuid">Generate UUID v4</button>
+    </div>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- Color -->
+  <section class="tool-panel" id="tool-color">
+    <div class="input-form">
+      <input type="text" id="colorInput" placeholder="#e63946 atau rgb(230,57,70)" value="#e63946">
+      <button class="act-btn" data-action="color-convert">Convert</button>
+    </div>
+    <div class="result-content hidden"></div>
+  </section>
+
+  <!-- Docs -->
+  <section class="tool-panel" id="tool-docs">
+    <div class="docs-grid">
+      <div class="doc-card">
+        <h3>POST /api/tiktok</h3>
+        <p>Scrape TikTok tanpa watermark.</p>
+        <pre><code>{"url":"https://vt.tiktok.com/..."}</code></pre>
+      </div>
+      <div class="doc-card">
+        <h3>POST /api/youtube</h3>
+        <p>Download YouTube + Shorts.</p>
+        <pre><code>{"url":"https://youtu.be/..."}</code></pre>
+      </div>
+      <div class="doc-card">
+        <h3>POST /api/instagram</h3>
+        <p>Reels, post, IGTV.</p>
+        <pre><code>{"url":"https://instagram.com/reel/..."}</code></pre>
+      </div>
+      <div class="doc-card">
+        <h3>POST /api/snackvideo</h3>
+        <p>Scrape SnackVideo.</p>
+        <pre><code>{"url":"https://s.snackvideo.com/..."}</code></pre>
+      </div>
+      <div class="doc-card">
+        <h3>POST /api/ffcheck</h3>
+        <p>Cek akun Free Fire OB55.</p>
+        <pre><code>{"uid":"123456789","region":"ID"}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section class="tool-panel" id="tool-about">
+    <div class="result-content">
+      <h3>LuciferAPI v2.0</h3>
+      <p>Multi-platform scraper + utility tools. Deploy-ready untuk Vercel.</p>
+      <p style="margin-top:1rem"><b>Stack:</b> Node.js · Express (Vercel Functions) · Vanilla JS</p>
+      <p><b>Tools:</b> 13</p>
+      <p><b>Platform:</b> TikTok · YouTube · Instagram · SnackVideo · Free Fire</p>
+      <p style="margin-top:1rem"><b>Author:</b> AN0nYMouS-ViP</p>
+    </div>
+  </section>
+</main>
+
+<script src="/script.js"></script>
+</body>
+</html>
