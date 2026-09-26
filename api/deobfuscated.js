@@ -1,128 +1,168 @@
 // language: JavaScript, file: api/deobfuscate.js
-// Deobfuscator Lua — Luraph, Moonsec, WeAreDevs, IronBrew, generic
-import luaparse from 'luaparse';
+// Lua Deobfuscator — Luraph, Moonsec, WeAreDevs, IronBrew, Ares, generic
 
-const SIGS = {
-  luraph: [/Luraph/i, /LPH_/i, /\bLPH\b/i, /luraph\.io/i, /^--\[\[ Luraph/i],
-  moonsec: [/moonsec/i, /MoonSec/i, /\bV\d+_/i, /moonloader/i],
-  wearedevs: [/wearedevs/i, /WeAreDevs/i, /wearedevs\.net/i],
-  ironbrew: [/IronBrew/i, /ironbrew/i, /\bIB2\b/i],
-  prometheus: [/Prometheus/i, /prometheus/i],
+const SIGNATURES = {
+  luraph: [/Luraph/i, /\bLPH\b/i, /LPH_/i, /luraph\.io/i, /LPH_[A-Z0-9]{4,}/],
+  moonsec: [/MoonSec/i, /\bV\d{1,3}_[A-Z0-9]/i, /moonsec\.com/i, /getscript\.net.*moon/i],
+  wearedevs: [/wearedevs/i, /WeAreDevs/i, /wearedevs\.net/i, /\bWRD\b/],
+  ironbrew: [/IronBrew/i, /\bIB2?\b/, /ironbrew/i],
+  ares: [/Ares/i, /ares\.gg/i],
+  prometheus: [/Prometheus/i],
   generic: [],
 };
 
 function detect(code) {
   const hits = [];
-  for (const [name, patterns] of Object.entries(SIGS)) {
+  for (const [name, pats] of Object.entries(SIGNATURES)) {
     if (name === 'generic') continue;
-    if (patterns.some(re => re.test(code))) hits.push(name);
+    if (pats.some(re => re.test(code))) hits.push(name);
   }
   return hits.length ? hits : ['generic'];
 }
 
-// Pass 1: decode \xNN hex escapes in string literals
-function decodeHexEscapes(code) {
+// pass 1: decode \xNN
+function decodeHex(code) {
   return code.replace(/\\x([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
 }
 
-// Pass 2: decode \ddd decimal escapes
-function decodeDecEscapes(code) {
-  return code.replace(/\\(\d{1,3})/g, (_, d) => {
+// pass 2: decode \ddd
+function decodeDec(code) {
+  return code.replace(/\\(\d{1,3})(?!\d)/g, (m, d) => {
     const n = parseInt(d, 10);
-    return n >= 0 && n <= 255 ? String.fromCharCode(n) : _;
+    return n >= 0 && n <= 255 ? String.fromCharCode(n) : m;
   });
 }
 
-// Pass 3: collapse string concatenation of literals: "a" .. "b" → "ab"
-function foldStringConcat(code) {
+// pass 3: decode \u{XXXX}
+function decodeUniBrace(code) {
+  return code.replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+}
+
+// pass 4: decode \uXXXX
+function decodeUni(code) {
+  return code.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+// pass 5: common escapes
+function decodeCommon(code) {
+  return code
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\r/g, '\r')
+    .replace(/\\a/g, '\x07')
+    .replace(/\\b/g, '\b')
+    .replace(/\\f/g, '\f')
+    .replace(/\\v/g, '\v');
+}
+
+// pass 6: fold string concat
+function foldConcat(code) {
+  const patterns = [
+    [/"((?:[^"\\]|\\.)*)"\s*\.\.\s*"((?:[^"\\]|\\.)*)"/g, (_, a, b) => '"' + a + b + '"'],
+    [/'((?:[^'\\]|\\.)*)'\s*\.\.\s*'((?:[^'\\]|\\.)*)'/g, (_, a, b) => "'" + a + b + "'"],
+  ];
   let prev;
   do {
     prev = code;
-    code = code.replace(/"((?:[^"\\]|\\.)*)"\s*\.\.\s*"((?:[^"\\]|\\.)*)"/g, '"$1$2"');
-    code = code.replace(/'((?:[^'\\]|\\.)*)'\s*\.\.\s*'((?:[^'\\]|\\.)*)'/g, "'$1$2'");
+    for (const [re, fn] of patterns) code = code.replace(re, fn);
   } while (code !== prev);
   return code;
 }
 
-// Pass 4: hex → decimal, binary → decimal
+// pass 7: numbers
 function normalizeNumbers(code) {
   return code
     .replace(/\b0x([0-9a-fA-F]+)\b/g, (_, h) => String(parseInt(h, 16)))
     .replace(/\b0b([01]+)\b/g, (_, b) => String(parseInt(b, 2)));
 }
 
-// Pass 5: remove common no-op patterns
-function stripWrappers(code) {
-  // local _ENV = _ENV;  → remove
-  code = code.replace(/local\s+_ENV\s*=\s*_ENV\s*;?/g, '');
-  // return(function(...) ... end)(...)  → unwrap the outer call structure
-  code = code.replace(/return\s*\(\s*function\s*\(([^)]*)\)/g, 'return function($1)');
-  return code;
+// pass 8: string.char(...) → "literal"
+function decodeStringChar(code) {
+  return code.replace(/string\.char\((\s*\d+(?:\s*,\s*\d+)*\s*)\)/g, (_, nums) => {
+    try {
+      const codes = nums.split(',').map(n => parseInt(n.trim(), 10));
+      const s = codes.map(c => String.fromCharCode(c)).join('');
+      return JSON.stringify(s);
+    } catch { return `string.char(${nums})`; }
+  });
 }
 
-// Pass 6: extract printable strings for report
+// pass 9: strip wrapper no-ops
+function stripNoOps(code) {
+  return code
+    .replace(/\blocal\s+_ENV\s*=\s*_ENV\s*;?/g, '')
+    .replace(/\blocal\s+_ENV\s*=\s*_G\s*;?/g, '')
+    .replace(/\breturn\s*\(\s*function/g, 'return function');
+}
+
+// extract printable strings
 function extractStrings(code) {
-  const out = new Set();
+  const set = new Set();
   const re = /"((?:[^"\\]|\\.){4,200})"|'((?:[^'\\]|\\.){4,200})'/g;
   let m;
   while ((m = re.exec(code))) {
     const s = m[1] || m[2];
-    if (/^[\x20-\x7e]{4,}$/.test(s)) out.add(s);
+    if (/^[\x20-\x7e]{4,}$/.test(s) && !/^[A-Za-z0-9+/=]{60,}$/.test(s)) set.add(s);
   }
-  return [...out].slice(0, 100);
+  return [...set].slice(0, 60);
 }
 
-// Pass 7: try to parse with luaparse → beautify
-function tryBeautify(code) {
-  try {
-    const ast = luaparse.parse(code, { luaVersion: '5.1', comments: false, scope: false, locations: false });
-    // luaparse doesn't output pretty text; use structured hints
-    return { parsed: true, stats: countNodes(ast) };
-  } catch (e) {
-    return { parsed: false, error: e.message };
-  }
-}
-
-function countNodes(node, counter = { total: 0, calls: 0, strings: 0, funcs: 0 }) {
-  if (!node || typeof node !== 'object') return counter;
-  if (Array.isArray(node)) {
-    for (const n of node) countNodes(n, counter);
-    return counter;
-  }
-  counter.total++;
-  if (node.type === 'CallExpression') counter.calls++;
-  if (node.type === 'StringLiteral') counter.strings++;
-  if (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression') counter.funcs++;
-  for (const key in node) {
-    if (key === 'type') continue;
-    const v = node[key];
-    if (v && typeof v === 'object') countNodes(v, counter);
-  }
-  return counter;
-}
-
-// Basic pretty-printer — indents by {, (, then, do, else; dedents by }, ), end, until
+// token-based pretty printer
 function prettyPrint(code) {
-  const tokens = code.split(/(\b(?:function|then|do|else|elseif|end|until|repeat|return|local|if|for|while)\b|[{}()\[\]]|;)/);
+  const TOKEN = /(\b(?:local|function|end|then|else|elseif|do|while|for|repeat|until|return|break|if|in)\b|[{}()\[\]]|[;,]|--[^\n]*)/g;
+  const parts = code.split(TOKEN).filter(p => p !== undefined && p !== '');
   let out = '';
   let indent = 0;
-  const pad = () => '  '.repeat(Math.max(0, indent));
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (!t) continue;
-    if (/^(end|until|\}|\)|\])$/.test(t)) {
+  let lineStart = true;
+  const pad = () => lineStart ? '  '.repeat(indent) : '';
+  const newline = () => { out = out.replace(/[ \t]+$/, '') + '\n'; lineStart = true; };
+  const emit = (s, sp = true) => {
+    if (lineStart) { out += pad(); lineStart = false; }
+    else if (sp && out && !/[\s\n]$/.test(out)) out += ' ';
+    out += s;
+  };
+
+  for (let i = 0; i < parts.length; i++) {
+    const t = parts[i];
+    const tt = t.trim();
+    if (!tt) continue;
+
+    if (tt.startsWith('--')) { emit(tt, false); newline(); continue; }
+
+    if (/^(end|until|\}|\)|\])$/.test(tt)) {
       indent = Math.max(0, indent - 1);
-      out = out.replace(/\s+$/, '') + '\n' + pad() + t;
+      if (!lineStart) newline();
+      emit(tt, false);
+      if (i + 1 < parts.length && !/^[,;.)}\]]/.test(parts[i + 1]?.trim() || '')) newline();
       continue;
     }
-    if (/^(function|then|do|else|repeat|\{|\(|\[)$/.test(t)) {
-      out += (out.endsWith(' ') || out.endsWith('\n') || out === '' ? '' : ' ') + t;
+
+    if (tt === ',') { emit(',', false); continue; }
+    if (tt === ';') { emit(';', false); newline(); continue; }
+
+    if (/^(then|do|else|repeat)$/.test(tt)) {
+      emit(tt, true);
       indent++;
+      newline();
       continue;
     }
-    out += t;
+
+    if (tt === 'function') {
+      emit('function', true);
+      continue;
+    }
+
+    if (/^(local|if|while|for|return|break|elseif|in)$/.test(tt)) {
+      emit(tt, true);
+      continue;
+    }
+
+    if (/^[{}()\[\]]$/.test(tt)) { emit(tt, false); continue; }
+
+    emit(tt, true);
   }
-  return out;
+
+  return out.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export default async function handler(req, res) {
@@ -131,42 +171,49 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const code = req.body?.code || req.query?.code;
+  let code = req.body?.code ?? req.query?.code;
   if (!code) return res.status(400).json({ error: 'code wajib' });
-  if (code.length > 500000) return res.status(413).json({ error: 'code terlalu besar (max 500KB)' });
+  if (typeof code !== 'string') return res.status(400).json({ error: 'code harus string' });
+  if (code.length > 800000) return res.status(413).json({ error: 'code terlalu besar (max 800KB)' });
 
-  const detected = detect(code);
-  const steps = [];
-  let work = code;
+  try {
+    const obfuscators = detect(code);
+    const steps = [];
+    let work = code;
 
-  work = decodeHexEscapes(work);
-  steps.push('decode \\xNN hex escapes');
-  work = decodeDecEscapes(work);
-  steps.push('decode \\ddd decimal escapes');
-  work = foldStringConcat(work);
-  steps.push('fold string concat ("a" .. "b" -> "ab")');
-  work = normalizeNumbers(work);
-  steps.push('normalize hex/binary numbers');
-  work = stripWrappers(work);
-  steps.push('strip wrapper no-ops');
+    const run = (label, fn) => {
+      const before = work;
+      work = fn(work);
+      steps.push({ pass: label, changed: work !== before, size: work.length });
+    };
 
-  const strings = extractStrings(work);
-  const parse = tryBeautify(work);
-  const pretty = prettyPrint(work);
+    run('decode \\xNN hex', decodeHex);
+    run('decode \\ddd decimal', decodeDec);
+    run('decode \\u{XXXX} unicode', decodeUniBrace);
+    run('decode \\uXXXX unicode', decodeUni);
+    run('decode common escapes', decodeCommon);
+    run('decode string.char()', decodeStringChar);
+    run('fold string concat', foldConcat);
+    run('normalize numbers', normalizeNumbers);
+    run('strip no-op wrappers', stripNoOps);
 
-  res.json({
-    obfuscators: detected,
-    primary: detected[0],
-    steps_applied: steps,
-    stats: {
-      input_size: code.length,
-      output_size: pretty.length,
-      parseable: parse.parsed,
-      parse_error: parse.error || null,
-      ast: parse.stats || null,
-    },
-    strings_found: strings,
-    code: pretty,
-    original_hex_dump: work === code ? null : 'modifications applied',
-  });
+    const strings = extractStrings(work);
+    const pretty = prettyPrint(work);
+
+    res.json({
+      obfuscators,
+      primary: obfuscators[0],
+      steps_applied: steps,
+      stats: {
+        input_size: code.length,
+        output_size: pretty.length,
+        lines: pretty.split('\n').length,
+        strings_extracted: strings.length,
+      },
+      strings_found: strings,
+      code: pretty,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
 }
