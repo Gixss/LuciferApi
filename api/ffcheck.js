@@ -1,9 +1,10 @@
+// language: JavaScript, file: api/ffcheck.js
 import axios from 'axios';
 
-const OB_VERSION = 'OB55';
+const OB = 'OB55';
 const UA = 'Dalvik/2.1.0 (Linux; U; Android 13; SM-S918B Build/TP1A.220624.014)';
 
-async function getGuestToken() {
+async function getToken() {
   const { data } = await axios.post(
     'https://100067.connect.garena.com/oauth/guest/token/grant',
     new URLSearchParams({
@@ -21,7 +22,8 @@ async function getGuestToken() {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const uid = req.query.uid || req.body?.uid;
@@ -29,7 +31,7 @@ export default async function handler(req, res) {
   if (!uid) return res.status(400).json({ error: 'uid wajib' });
 
   try {
-    const token = await getGuestToken();
+    const token = await getToken();
     const { data } = await axios.get('https://client.ind.freefiremobile.com/GetPlayerPersonalShow', {
       params: { target_uid: uid },
       headers: {
@@ -37,24 +39,32 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${token.access_token}`,
         'X-Unity-Version': '2018.4.11f1',
         'X-GA': 'v1 1',
-        'ReleaseVersion': OB_VERSION,
+        'ReleaseVersion': OB,
         'Content-Type': 'application/x-www-form-urlencoded',
         'Host': 'client.ind.freefiremobile.com',
       },
       timeout: 15000,
     });
     res.json({
-      platform: 'freefire', ob: OB_VERSION, uid, region,
+      platform: 'freefire',
+      ob: OB,
+      uid,
+      region,
       account: {
-        nickname: data.nickname, level: data.level, exp: data.exp,
-        rank: data.rank, rank_points: data.rank_points,
-        badges: data.badge_cnt, signature: data.signature,
-        clan_name: data.clan_name, clan_id: data.clan_id,
-        create_time: data.create_time, last_login: data.last_login,
-        head_pic: data.head_pic, banner: data.banner,
+        nickname: data.nickname,
+        level: data.level,
+        exp: data.exp,
+        rank: data.rank,
+        rank_points: data.rank_points,
+        badges: data.badge_cnt,
+        signature: data.signature,
+        clan_name: data.clan_name,
+        clan_id: data.clan_id,
+        head_pic: data.head_pic,
+        banner: data.banner,
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message, detail: err.response?.data });
+    res.status(500).json({ error: err.message, hint: 'Region mismatch atau token kena limit. Coba ulang.' });
   }
 }
