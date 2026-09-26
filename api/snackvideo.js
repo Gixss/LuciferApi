@@ -1,9 +1,11 @@
+// language: JavaScript, file: api/snackvideo.js
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = req.query.url || req.body?.url;
@@ -13,14 +15,20 @@ export default async function handler(req, res) {
     const { data: html } = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/122.0.0.0 Mobile Safari/537.36' },
       timeout: 15000,
+      maxRedirects: 5,
     });
     const $ = cheerio.load(html);
+    const video = $('meta[property="og:video"]').attr('content')
+      || $('meta[property="og:video:url"]').attr('content')
+      || $('meta[property="og:video:secure_url"]').attr('content')
+      || $('video source').attr('src');
+    if (!video) return res.status(502).json({ error: 'video URL tidak ditemukan' });
     res.json({
       platform: 'snackvideo',
-      title: $('meta[property="og:title"]').attr('content'),
-      description: $('meta[property="og:description"]').attr('content'),
-      thumbnail: $('meta[property="og:image"]').attr('content'),
-      video: $('meta[property="og:video"]').attr('content') || $('meta[property="og:video:url"]').attr('content') || $('video source').attr('src'),
+      title: $('meta[property="og:title"]').attr('content') || null,
+      description: $('meta[property="og:description"]').attr('content') || null,
+      thumbnail: $('meta[property="og:image"]').attr('content') || null,
+      video,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
